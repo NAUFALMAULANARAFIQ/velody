@@ -59,7 +59,9 @@ Contoh struktur data dummy (dalam bentuk JSON):
     }
   ]
 }
-📱 Cara Menggunakan Aplikasi
+
+---
+📱 **Cara Menggunakan Aplikasi**
 
 1. Menjalankan Aplikasi
 
