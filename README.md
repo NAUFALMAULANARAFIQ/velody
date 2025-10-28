@@ -68,7 +68,7 @@ Data mencakup daftar lagu, informasi pengguna, serta playlist sederhana untuk ke
   ]
 }
 
-```json
+```
 
 ⚙️ Cara Penggunaan Aplikasi
 
