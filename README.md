@@ -1,127 +1,144 @@
-🎵 Velody App
-📌 Deskripsi Singkat
+# 🎵 Velody — Aplikasi Pemutar Musik Mellow
 
-Velody App adalah aplikasi mobile berbasis Flutter yang dirancang untuk memberikan pengalaman mendengarkan musik yang tenang, elegan, dan berkarakter mellow.
-Aplikasi ini dikembangkan sebagai proyek UTS Pemrograman Mobile, dengan tujuan menghadirkan platform musik sederhana yang tetap menonjol secara estetika melalui desain antarmuka yang modern dan minimalis.
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-brightgreen?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Stable-blue?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-🎯 Tujuan Aplikasi
+---
 
-Menyediakan pengalaman pemutaran musik yang intuitif dan nyaman.
+📌 **Deskripsi Singkat**  
+Velody adalah aplikasi pemutar musik berbasis **Flutter** yang dirancang untuk menghadirkan pengalaman mendengarkan musik yang lembut, tenang, dan elegan.  
+Aplikasi ini mengusung konsep **musik mellow** dengan tampilan **minimalis modern**, serta mendukung mode **Light** dan **Dark** untuk menyesuaikan preferensi pengguna.  
 
-Memberikan suasana visual yang lembut dan elegan melalui tema warna “Deep Mauve”.
+Velody dibuat sebagai proyek **UTS Pemrograman Mobile** dengan tujuan untuk melatih pengembangan aplikasi mobile yang fokus pada kenyamanan pengguna dan estetika antarmuka.
 
-Menjadi aplikasi musik dengan fokus pada keteraturan desain, bukan sekadar fungsionalitas.
+---
 
-Menjadi dasar pengembangan aplikasi musik cerdas di masa depan.
+🎯 **Tujuan Aplikasi**  
+- Memberikan pengalaman mendengarkan musik dengan nuansa mellow yang menenangkan.  
+- Menyediakan fitur dasar pemutar musik seperti *play, pause, next, previous,* dan *lyrics view*.  
+- Menghadirkan antarmuka yang minimalis, elegan, dan mudah digunakan.  
+- Mendukung mode **Light** dan **Dark** agar nyaman di berbagai kondisi pencahayaan.  
+- Menjadi dasar pengembangan aplikasi musik yang lebih kompleks di masa depan.
 
-🧩 Daftar Halaman dan Fungsinya
-Halaman	Nama File	Fungsi Utama
-Get Started Page	get_started.dart	Tampilan pembuka aplikasi dengan tombol untuk memulai.
-Choose Mode Page	choose_mode.dart	Halaman untuk memilih tema terang atau gelap sebelum masuk ke aplikasi.
-Login Page	login_page.dart	Halaman untuk pengguna masuk ke akun mereka.
-Register Page	register_page.dart	Halaman pendaftaran akun baru.
-Home Page	home_page.dart	Menampilkan daftar lagu dan rekomendasi playlist.
-Player Page	player_page.dart	Menampilkan cover lagu, tombol kontrol, dan lirik.
-Search Page	search_page.dart	Pencarian lagu, artis, atau playlist.
-Profile Page	profile_page.dart	Menampilkan data pengguna dan pengaturan akun.
-💾 Pengolahan Data Dummy
+---
 
-Aplikasi Velody saat ini menggunakan data statis (dummy) untuk menampilkan daftar lagu, playlist, dan informasi pengguna.
-Data disimpan secara lokal menggunakan struktur list sederhana pada file .dart, yang nantinya dapat dikembangkan menjadi basis data dinamis (misalnya menggunakan Firebase atau SQLite).
+🧩 **Daftar Halaman dan Fungsinya**
 
-Contoh struktur data dummy (dalam bentuk map Dart):
+| Halaman | Nama File | Fungsi Utama |
+|----------|------------|---------------|
+| Get Started | `get_started.dart` | Halaman pembuka aplikasi yang memperkenalkan konsep dan tombol mulai. |
+| Choose Mode | `choose_mode.dart` | Menyediakan pilihan tampilan Light/Dark sebelum masuk ke menu utama. |
+| Login Page | `login_page.dart` | Form login bagi pengguna yang sudah memiliki akun. |
+| Register Page | `register_page.dart` | Form registrasi pengguna baru untuk membuat akun. |
+| Home Page | `home_page.dart` | Menampilkan daftar lagu, rekomendasi playlist, dan musik favorit. |
+| Player Page | `player_page.dart` | Memutar lagu, menampilkan cover, kontrol musik, serta lirik. |
+| Search Page | `search_page.dart` | Pencarian lagu, artis, atau playlist berdasarkan kata kunci. |
+| Profile Page | `profile_page.dart` | Menampilkan informasi pengguna dan opsi pengaturan akun. |
 
-final songs = [
-  {
-    "title": "Mellow Breeze",
-    "artist": "Aurora Lane",
-    "duration": "3:45",
-    "cover": "assets/images/mellow_breeze.jpg"
+---
+
+💾 **Pengolahan Data Dummy**  
+Pada versi ini, semua data yang ditampilkan dalam aplikasi masih bersifat **dummy** dan disimpan secara lokal.  
+Data mencakup daftar lagu, informasi pengguna, serta playlist sederhana untuk keperluan demonstrasi.
+
+**Contoh struktur data dummy (dalam bentuk JSON):**
+
+```json
+{
+  "user": {
+    "name": "Naufal",
+    "avatar": ""
   },
-  {
-    "title": "Evening Glow",
-    "artist": "Velora",
-    "duration": "4:12",
-    "cover": "assets/images/evening_glow.jpg"
-  }
-];
+  "songs": [
+    {
+      "id": 1,
+      "title": "Faded Memories",
+      "artist": "Velody Sounds",
+      "duration": "03:45"
+    },
+    {
+      "id": 2,
+      "title": "Midnight Rain",
+      "artist": "Mellow Tune",
+      "duration": "04:10"
+    }
+  ]
+}
 
-📱 Cara Menggunakan Aplikasi
+⚙️ Cara Penggunaan Aplikasi
 
-Menjalankan Aplikasi
+Clone Repository
 
-Buka terminal pada direktori proyek.
+git clone https://github.com/username/velody.git
 
-Jalankan perintah berikut untuk memulai aplikasi:
+
+Masuk ke Folder Project
+
+cd velody
+
+
+Jalankan Perintah Get Packages
+
+flutter pub get
+
+
+Jalankan Aplikasi
 
 flutter run
 
 
-Aplikasi akan tampil di emulator atau perangkat fisik yang terhubung.
+Aplikasi dapat dijalankan di emulator Android/iOS maupun perangkat fisik.
 
-Navigasi Awal
+🗂️ Struktur Folder Project
 
-Saat pertama kali dijalankan, pengguna akan diarahkan ke halaman Get Started.
+lib/
+├── common/
+│   └── widgets/
+│       └── button/
+│           └── basic_app_button.dart
+├── core/
+│   └── configs/
+│       ├── assets/
+│       │   ├── app_images.dart
+│       │   └── app_vector.dart
+│       └── theme/
+│           └── app_theme.dart
+├── features/
+│   ├── auth/
+│   │   ├── login_page.dart
+│   │   └── register_page.dart
+│   ├── home/
+│   │   ├── home_page.dart
+│   │   └── player_page.dart
+│   ├── profile/
+│   │   └── profile_page.dart
+│   └── search/
+│       └── search_page.dart
+└── main.dart
 
-Setelah itu, masuk ke Choose Mode untuk memilih tema tampilan (light atau dark).
 
-Login & Register
+🖼️ Preview Tampilan (Contoh)
+(Tambahkan screenshot jika tersedia di folder assets/screenshots)
 
-Pengguna baru dapat membuat akun melalui Register Page.
+📱 Get Started → Choose Mode → Home Page → Player Page
 
-Setelah terdaftar, pengguna dapat masuk melalui Login Page dan diarahkan ke halaman utama.
+💡 Teknologi yang Digunakan
 
-Menjelajahi Musik
+Flutter (Framework utama)
 
-Di Home Page, pengguna dapat melihat daftar lagu dan playlist yang direkomendasikan.
+Dart (Bahasa pemrograman)
 
-Tekan salah satu lagu untuk membuka Player Page, di mana pengguna bisa memutar, menjeda, atau melihat lirik.
+Provider / Bloc (State Management)
 
-Pencarian dan Profil
+Shared Preferences (Penyimpanan lokal)
 
-Gunakan Search Page untuk mencari lagu atau artis tertentu.
+Google Fonts & Lottie (UI Enhancement)
 
-Profile Page memungkinkan pengguna melihat informasi akun dan mengubah mode tampilan.
+👨‍💻 Dibuat oleh
+Naufal Maulana rafiq 
+📚 UTS Pemrograman Mobile – 2025
 
-🎨 Desain Antarmuka (UI/UX)
-
-Konsep Desain:
-Gaya minimalis modern dengan palet warna lembut yang memberikan kesan elegan dan menenangkan.
-
-Palet Warna:
-
-Primary: Deep Mauve #A78BFA
-
-Secondary: Lavender Grey #B3A0FF
-
-Background Light: #F9F9FB
-
-Background Dark: #121212
-
-Text Light: #3A3A3A
-
-Text Dark: #E0E0E0
-
-Tipografi:
-Menggunakan font Satoshi, memberikan kesan modern dan mudah dibaca.
-
-Inspirasi Desain:
-Terinspirasi dari tampilan visual Spotify, dengan sentuhan tone warna yang lebih lembut dan calm sesuai karakter Velody.
-
-👩‍💻 Informasi Pengembang
-Nama	NIM	Kelas	Program Studi	Universitas
-Naufal Maulana	230605110003	A	Teknik Informatika	UIN Maulana Malik Ibrahim Malang
-🌟 Fitur yang Akan Dikembangkan
-
-Integrasi API Musik untuk pemutaran lagu asli.
-
-Fitur Playlist Pribadi dan sistem favorit.
-
-Fitur Lyric Synchronization secara real-time.
-
-Mode Dark/Light otomatis berdasarkan preferensi sistem.
-
-📚 Lisensi
-
-Proyek ini dibuat sebagai bagian dari Ujian Tengah Semester (UTS) mata kuliah Pemrograman Mobile.
-Seluruh hak cipta hanya digunakan untuk kepentingan akademik dan tidak untuk tujuan komersial.
+✨ “Listen with calm, live with harmony.” — Velody
