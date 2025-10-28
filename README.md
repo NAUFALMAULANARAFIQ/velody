@@ -70,6 +70,7 @@ Data mencakup daftar lagu, informasi pengguna, serta playlist sederhana untuk ke
 
 ```
 
+---
 ⚙️ Cara Penggunaan Aplikasi
 
 Clone Repository
@@ -94,39 +95,7 @@ flutter run
 
 Aplikasi dapat dijalankan di emulator Android/iOS maupun perangkat fisik.
 
-🗂️ Struktur Folder Project
-
-lib/
-├── common/
-│   └── widgets/
-│       └── button/
-│           └── basic_app_button.dart
-├── core/
-│   └── configs/
-│       ├── assets/
-│       │   ├── app_images.dart
-│       │   └── app_vector.dart
-│       └── theme/
-│           └── app_theme.dart
-├── features/
-│   ├── auth/
-│   │   ├── login_page.dart
-│   │   └── register_page.dart
-│   ├── home/
-│   │   ├── home_page.dart
-│   │   └── player_page.dart
-│   ├── profile/
-│   │   └── profile_page.dart
-│   └── search/
-│       └── search_page.dart
-└── main.dart
-
-
-🖼️ Preview Tampilan (Contoh)
-(Tambahkan screenshot jika tersedia di folder assets/screenshots)
-
-📱 Get Started → Choose Mode → Home Page → Player Page
-
+---
 💡 Teknologi yang Digunakan
 
 Flutter (Framework utama)
