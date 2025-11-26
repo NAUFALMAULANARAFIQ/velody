@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:project_mobile/core/configs/assets/app_images.dart';
-import 'package:project_mobile/presentation/home/pages/home.dart';
-import 'package:project_mobile/presentation/home/pages/search_page.dart';
+import 'package:project_mobile/core/configs/themes/app_colors.dart';
+import 'package:project_mobile/data/models/songs.dart';
+import 'package:project_mobile/presentation/home/pages/music_pages.dart';
+import 'package:project_mobile/presentation/auth/pages/signin.dart';
+import 'package:project_mobile/services/user_service.dart';
+import 'package:project_mobile/services/favorite_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -11,7 +15,54 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  int _currentIndex = 3; // posisi aktif: Profile
+  Map<String, dynamic>? _userData;
+  List<Song> _favoriteSongs = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final results = await Future.wait([
+        UserService.getUserProfile(),
+        FavoriteService.getFavorites(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _userData = results[0] as Map<String, dynamic>?;
+          _favoriteSongs = results[1] as List<Song>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); 
+
+    if (mounted) {
+      Navigator.pop(context);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const SigninPages()),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,195 +70,297 @@ class _ProfilePageState extends State<ProfilePage> {
     final bgColor = isDark ? const Color(0xFF121212) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
     final subTextColor = isDark ? Colors.white70 : Colors.black54;
-    final accentColor = const Color(0xFF3DDC84); // Hijau Spotify-like
 
-    // Dummy playlist data
-    final List<Map<String, String>> playlists = [
-      {'title': 'Dont Smile At Me', 'artist': 'Billie Eilish', 'image': AppImages.album1},
-      {'title': 'As It Was', 'artist': 'Harry Styles', 'image': AppImages.album2},
-      {'title': 'Super Freaky Girl', 'artist': 'Nicki Minaj', 'image': AppImages.album3},
-      {'title': 'Bad Habit', 'artist': 'Steve Lacy', 'image': AppImages.album4},
-      {'title': 'Planet Her', 'artist': 'Doja Cat', 'image': AppImages.album5},
-      {'title': 'Sweetest Pie', 'artist': 'Megan Thee Stallion', 'image': AppImages.album6},
-    ];
+    String initialName = _userData != null && _userData!['username'] != null
+        ? _userData!['username'][0].toUpperCase()
+        : "?";
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // --- HEADER PROFILE ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
               child: Column(
                 children: [
-                  // Top bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(Icons.arrow_back_ios_new_rounded,
-                            color: textColor, size: 20),
-                      ),
-                      Text(
-                        'Profile',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+    
+                            Navigator.canPop(context)
+                                ? IconButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    icon: Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      color: textColor,
+                                      size: 20,
+                                    ),
+                                  )
+                                : const SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                  ),
+
+                            Text(
+                              'Profile',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+
+                            PopupMenuButton<String>(
+                              icon: Icon(Icons.more_vert, color: subTextColor),
+                              color: isDark
+                                  ? const Color(0xFF333333)
+                                  : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              onSelected: (value) {
+                                if (value == 'logout') {
+                                  _logout();
+                                }
+                              },
+                              itemBuilder: (BuildContext context) => [
+                                const PopupMenuItem<String>(
+                                  value: 'logout',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.logout,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'Log Out',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: Icon(Icons.more_vert, color: subTextColor),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
+                        const SizedBox(height: 20),
 
-                  // Profile photo
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: const AssetImage('assets/images/profile.jpeg'),
-                    backgroundColor: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 10),
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[800],
+                          child: Text(
+                            initialName,
+                            style: const TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
 
-                  // Email
-                  Text(
-                    'soroushnorozyui@gmail.com',
-                    style: TextStyle(color: subTextColor, fontSize: 14),
-                  ),
-                  const SizedBox(height: 4),
+                        Text(
+                          _userData?['email'] ?? 'No Email',
+                          style: TextStyle(color: subTextColor, fontSize: 14),
+                        ),
+                        const SizedBox(height: 6),
 
-                  // Username
-                  Text(
-                    'Soroushnrz',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
+                        Text(
+                          _userData?['username'] ?? 'Guest',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildStat(
+                              "Favorites",
+                              _favoriteSongs.length.toString(),
+                              textColor,
+                              subTextColor,
+                            ),
+                            const SizedBox(width: 40),
+                            _buildStat(
+                              "Following",
+                              "0",
+                              textColor,
+                              subTextColor,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-                  // Followers & Following
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Column(
-                        children: [
-                          Text('778',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: textColor)),
-                          Text('Followers',
-                              style:
-                                  TextStyle(color: subTextColor, fontSize: 14)),
-                        ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'FAVORITE SONGS',
+                        style: TextStyle(
+                          color: subTextColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          letterSpacing: 1.2,
+                        ),
                       ),
-                      const SizedBox(width: 40),
-                      Column(
-                        children: [
-                          Text('243',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: textColor)),
-                          Text('Following',
-                              style:
-                                  TextStyle(color: subTextColor, fontSize: 14)),
-                        ],
-                      ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  Expanded(
+                    child: _favoriteSongs.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.favorite_border,
+                                  size: 50,
+                                  color: subTextColor.withOpacity(0.3),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  "No favorites yet",
+                                  style: TextStyle(color: subTextColor),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: _favoriteSongs.length,
+                            itemBuilder: (context, index) {
+                              final song = _favoriteSongs[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => MusicPage(
+                                        playlist: _favoriteSongs,
+                                        initialIndex: index,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  color: Colors.transparent,
+                                  child: Row(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          song.customCoverUrl,
+                                          width: 55,
+                                          height: 55,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (ctx, err, stack) =>
+                                              Container(
+                                                width: 55,
+                                                height: 55,
+                                                color: Colors.grey[800],
+                                                child: const Icon(
+                                                  Icons.music_note,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              song.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: textColor,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              song.artist,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: subTextColor,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        _formatDuration(song.duration),
+                                        style: TextStyle(color: subTextColor),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      const Icon(
+                                        Icons.favorite,
+                                        color: Colors.red,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-
-            // --- PLAYLIST TITLE ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'PUBLIC PLAYLISTS',
-                  style: TextStyle(
-                    color: subTextColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // --- PLAYLIST LIST ---
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: playlists.length,
-                itemBuilder: (context, index) {
-                  final playlist = playlists[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(
-                            playlist['image']!,
-                            width: 55,
-                            height: 55,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                              width: 55,
-                              height: 55,
-                              color: Colors.grey[400],
-                              child: const Icon(Icons.music_note, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                playlist['title']!,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                playlist['artist']!,
-                                style: TextStyle(
-                                  color: subTextColor,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text('5:33', style: TextStyle(color: subTextColor)),
-                        const SizedBox(width: 10),
-                        Icon(Icons.more_vert, color: subTextColor),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
     );
+  }
+
+  Widget _buildStat(
+    String label,
+    String count,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    return Column(
+      children: [
+        Text(
+          count,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: textColor,
+          ),
+        ),
+        Text(label, style: TextStyle(color: subTextColor, fontSize: 14)),
+      ],
+    );
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 }
