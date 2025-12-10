@@ -1,124 +1,81 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:project_mobile/data/models/playlist.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:project_mobile/data/models/songs.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../data/models/playlist.dart';
+import '../data/models/songs.dart'; // Jangan lupa import model Song
 
 class PlaylistService {
-  static const String baseUrl = "http://10.0.2.2:8000/api/playlists";
-
+  
+  // 1. Ambil Semua Playlist (Untuk Halaman Library)
   static Future<List<PlaylistModel>> getPlaylists() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      if (token == null) return [];
-
-      final response = await http.get(
-        Uri.parse(baseUrl),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        return body.map((e) => PlaylistModel.fromJson(e)).toList();
-      }
-      return [];
+      var snapshot = await FirebaseFirestore.instance.collection('playlists').get();
+      return snapshot.docs.map((doc) => PlaylistModel.fromFirestore(doc)).toList();
     } catch (e) {
+      print("Error ambil playlist: $e");
       return [];
     }
   }
 
-  static Future<bool> createPlaylist(String name, String descripsion) async {
+  // 2. Buat Playlist Baru (Dipanggil di Dialog Create)
+  static Future<void> createPlaylist(String name, String description) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      if (token == null) return false;
-
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode({"name": name, "descripsion" : descripsion}),
-      );
-
-      return response.statusCode == 200 || response.statusCode == 201;
+      await FirebaseFirestore.instance.collection('playlists').add({
+        'name': name,
+        'description': description,
+        'songs': [], // Awalnya kosong
+        'created_at': FieldValue.serverTimestamp(), // Biar tau kapan dibuat
+      });
     } catch (e) {
+      print("Gagal buat playlist: $e");
+    }
+  }
+
+  // 3. Tambah Lagu ke Playlist (Dipanggil di Sheet AddToPlaylist)
+  static Future<bool> addSongToPlaylist(String playlistId, String songId) async {
+    try {
+      await FirebaseFirestore.instance.collection('playlists').doc(playlistId).update({
+        'songs': FieldValue.arrayUnion([songId]) // arrayUnion mencegah duplikat
+      });
+      return true;
+    } catch (e) {
+      print("Gagal nambah ke playlist: $e");
       return false;
     }
   }
 
-  static Future<bool> addSongToPlaylist(int playlistId, int songId) async {
+  // 4. Ambil Detail Lagu dalam Playlist (Dipanggil di PlaylistDetailPage)
+  // Ini agak tricky: Kita ambil ID lagunya dulu dari Playlist, baru ambil data aslinya dari collection Songs
+  static Future<List<Song>> getSongsByPlaylistId(String playlistId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      
-      if (token == null) {
-        print("Add Song: Token kosong");
-        return false;
+      // A. Ambil Dokumen Playlist-nya dulu
+      DocumentSnapshot playlistDoc = await FirebaseFirestore.instance
+          .collection('playlists')
+          .doc(playlistId)
+          .get();
+
+      if (!playlistDoc.exists) return [];
+
+      // B. Ambil array 'songs' yang isinya cuma ID ["lagu_1", "lagu_2"]
+      Map<String, dynamic> data = playlistDoc.data() as Map<String, dynamic>;
+      List<dynamic> songIds = data['songs'] ?? [];
+
+      List<Song> songs = [];
+
+      // C. Looping ID tersebut untuk ambil data lengkap dari collection 'songs'
+      for (String songId in songIds) {
+        DocumentSnapshot songDoc = await FirebaseFirestore.instance
+            .collection('songs')
+            .doc(songId)
+            .get();
+
+        if (songDoc.exists) {
+          songs.add(Song.fromFirestore(songDoc));
+        }
       }
 
-      final url = "$baseUrl/$playlistId/songs"; 
-      print("Add Song Request: $url");
-      print("Data: id_songs = $songId");
-
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode({"id_songs": songId}),
-      );
-
-      print("Status Code: ${response.statusCode}");
-      print("Body Error: ${response.body}"); 
-      return response.statusCode == 200;
+      return songs;
     } catch (e) {
-      print("Error Koneksi: $e");
-      return false;
-    }
-  }
-
-  static Future<List<Song>> getSongsByPlaylistId(int playlistId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      if (token == null) return [];
-
-      final url = "$baseUrl/$playlistId/songs"; 
-      print("Fetching songs from: $url");
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
-
-      print("Status Songs: ${response.statusCode}");
-
-      if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        
-        print("Dapat ${body.length} lagu");
-        
-        return body.map((e) => Song.fromJson(e)).toList();
-      }
-      
-      print("Gagal ambil lagu: ${response.body}");
-      return [];
-    } catch (e) {
-      print("Error Service: $e");
+      print("Error ambil lagu di playlist: $e");
       return [];
     }
   }
-
 }

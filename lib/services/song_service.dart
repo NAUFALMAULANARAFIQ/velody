@@ -1,58 +1,34 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../data/models/songs.dart';
 
 class SongService {
-  static const String baseUrl = "http://10.0.2.2:8000/api"; 
-
   static Future<List<Song>> getSongs() async {
-    final url = Uri.parse("$baseUrl/songs");
-
     try {
-      final res = await http.get(url);
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
+      print("🚀 Sedang mengambil lagu dari Firestore..."); // CCTV 1
 
-        List<dynamic> data;
-        if (body is List) {
-          data = body; 
-        } else if (body is Map<String, dynamic> && body.containsKey('data')) {
-          data = body['data'];
-        } else {
-          print("Unexpected JSON format: $body");
-          return [];
-        }
+      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('songs').get();
+      
+      print("📦 Ditemukan ${snapshot.docs.length} dokumen lagu."); // CCTV 2
 
-        return data.map((e) => Song.fromJson(e)).toList();
-      } else {
-        print("Server Error: ${res.statusCode}");
+      if (snapshot.docs.isEmpty) {
+        print("⚠️ Waduh, collection 'songs' kosong beb!");
         return [];
       }
+
+      List<Song> songs = snapshot.docs.map((doc) {
+        // Cek data mentah biar tau kalau ada field yang salah
+        // print("📄 Data mentah: ${doc.data()}"); 
+        return Song.fromFirestore(doc);
+      }).toList();
+
+      print("✅ Berhasil memproses ${songs.length} lagu jadi object Song."); // CCTV 3
+      return songs;
+
     } catch (e) {
-      print("Connection Error: $e");
+      print("❌ ERROR PARAH BEB: $e"); // CCTV Error
       return [];
     }
   }
 
-  static Future<Song?> getSongById(int id) async {
-    final url = Uri.parse("$baseUrl/songs/$id");
-
-    try {
-      final res = await http.get(url);
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final data = body is Map<String, dynamic> && body.containsKey('data')
-            ? body['data']
-            : body;
-        return Song.fromJson(data);
-      } else {
-        print("Server Error: ${res.statusCode}");
-        return null;
-      }
-    } catch (e) {
-      print("Connection Error: $e");
-      return null;
-    }
-  }
+  // ... (Fungsi getSongById biarkan saja)
 }

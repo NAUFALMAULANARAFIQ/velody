@@ -1,68 +1,98 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:project_mobile/data/models/songs.dart';
 
 class FavoriteService {
-  static const String baseUrl = "http://10.0.2.2:8000/api/favorites";
+  
+  // Helper: Ambil ID User yang sedang login
+  static String get _userId {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception("User belum login beb!");
+    }
+    return user.uid;
+  }
 
-static Future<bool> toggleFavorite(int songId) async {
+  // 1. Toggle Favorite (Like / Unlike)
+  static Future<bool> toggleFavorite(String songId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token'); 
-      if (token == null) {
-        print("❌ GAGAL: Token kosong! User belum login atau sesi habis.");
-        return false; 
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('favorites')
+          .doc(songId);
+
+      final doc = await docRef.get();
+
+      if (doc.exists) {
+        // Kalau sudah ada -> HAPUS (Unlike)
+        await docRef.delete();
+        return false; // False = Tidak like lagi
+      } else {
+        // Kalau belum ada -> SIMPAN (Like)
+        await docRef.set({
+          'songId': songId,
+          'added_at': FieldValue.serverTimestamp(),
+        });
+        return true; // True = Sekarang like
       }
-      
-      print("Mengirim Request...");
-      print("Song ID yang dikirim: $songId");
-      print("Token yang dikirim: $token"); 
-
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode({
-          "id_songs": songId,
-        }),
-      );
-
-      print("Server Response: ${response.statusCode}");
-      print("Body: ${response.body}");
-
-      if (response.statusCode == 200) {
-        return true;
-      }
-      return false;
     } catch (e) {
-      print("Error Koneksi: $e");
+      print("Error toggle favorite: $e");
       return false;
     }
   }
 
+  // 2. Cek Status (Apakah lagu ini dilike?)
+  static Future<bool> isFavorite(String songId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('favorites')
+          .doc(songId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 3. Ambil Semua Favorit (VERSI TURBO / NGEBUT) 🚀
   static Future<List<Song>> getFavorites() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      if (token == null) return [];
-      final response = await http.get(
-        Uri.parse(baseUrl), 
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
+      // A. Ambil daftar ID lagu favorit user
+      QuerySnapshot favSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('favorites')
+          .orderBy('added_at', descending: true)
+          .get();
 
-      if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        return body.map((e) => Song.fromJson(e)).toList();
+      if (favSnapshot.docs.isEmpty) return [];
+
+      // B. Siapkan request pengambilan data secara BERSAMAAN (Paralel)
+      // Kita tidak pakai 'await' di dalam loop, tapi kita kumpulkan dulu tugasnya
+      List<Future<DocumentSnapshot>> tasks = favSnapshot.docs.map((doc) {
+        return FirebaseFirestore.instance
+            .collection('songs') // Ambil detail dari collection songs utama
+            .doc(doc.id)
+            .get();
+      }).toList();
+
+      // C. Jalankan semua tugas sekaligus! (Ini yang bikin cepat)
+      List<DocumentSnapshot> songDocs = await Future.wait(tasks);
+
+      // D. Ubah hasil data menjadi list Song
+      List<Song> favoriteSongs = [];
+      for (var doc in songDocs) {
+        if (doc.exists) {
+          favoriteSongs.add(Song.fromFirestore(doc));
+        }
       }
-      return [];
+
+      return favoriteSongs;
     } catch (e) {
+      print("Error ambil favorites: $e");
       return [];
     }
   }

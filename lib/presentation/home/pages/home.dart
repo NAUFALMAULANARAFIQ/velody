@@ -9,6 +9,7 @@ import 'package:project_mobile/presentation/home/pages/music_pages.dart';
 import 'package:project_mobile/presentation/home/pages/profile_page.dart';
 import 'package:project_mobile/presentation/home/pages/search_page.dart';
 import 'package:project_mobile/presentation/home/pages/playlists_page.dart';
+import 'package:project_mobile/services/seeder_service.dart';
 import 'package:project_mobile/services/song_service.dart';
 import 'package:project_mobile/common/widgets/favorite_button/favorite_button.dart'; 
 
@@ -60,6 +61,26 @@ class _HomePageState extends State<HomePage>
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: pages[_currentIndex],
+      // floatingActionButton: FloatingActionButton(
+      //   backgroundColor: Colors.red, // Warna merah biar kelihatan
+      //   child: const Icon(Icons.cloud_upload),
+      //   onPressed: () async {
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       const SnackBar(content: Text("Sedang mengupload lagu...")),
+      //     );
+          
+      //     await SeederService.uploadSongs();
+          
+      //     // Refresh halaman (trick simpel: setState kosong)
+      //     setState(() {
+      //        songFuture = SongService.getSongs();
+      //     });
+          
+      //     ScaffoldMessenger.of(context).showSnackBar(
+      //       const SnackBar(content: Text("SUKSES! 10 Lagu sudah masuk database!")),
+      //     );
+      //   },
+      // ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),

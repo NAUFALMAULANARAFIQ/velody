@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:http/http.dart' as http;
 import 'package:project_mobile/common/widgets/appbar/app_bar.dart';
 import 'package:project_mobile/common/widgets/button/basic_app_button.dart';
 import 'package:project_mobile/core/configs/assets/app_vector.dart';
 import 'package:project_mobile/presentation/auth/pages/signin.dart';
+import 'package:project_mobile/services/auth_service.dart'; // Import AuthService
 
 class SignupPages extends StatefulWidget {
   const SignupPages({super.key});
@@ -21,6 +21,7 @@ class _SignupPagesState extends State<SignupPages> {
   bool loading = false;
 
   Future<void> register() async {
+    // Validasi input kosong
     if (fullnameController.text.isEmpty ||
         emailController.text.isEmpty ||
         passwordController.text.isEmpty) {
@@ -32,36 +33,30 @@ class _SignupPagesState extends State<SignupPages> {
 
     setState(() => loading = true);
 
-    try {
-      final response = await http.post(
-        Uri.parse("http://10.0.2.2:8000/api/auth/register"),
-        headers: {
-          "Accept": "application/json",
-        },
-        body: {
-          "username": fullnameController.text,
-          "email": emailController.text,
-          "password": passwordController.text,
-        },
+    // Panggil AuthService Firebase
+    String? error = await AuthService().signUp(
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
+      username: fullnameController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    if (error == null) {
+      // Sukses (Errornya null)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registrasi berhasil! Silakan login.")),
       );
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Registrasi berhasil, silahkan login")),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const SigninPages()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal: ${response.body}")),
-        );
-      }
-    } catch (e) {
+      // Pindah ke halaman Login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SigninPages()),
+      );
+    } else {
+      // Gagal (Tampilkan pesan error dari Firebase)
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(content: Text("Gagal: $error"), backgroundColor: Colors.red),
       );
     }
 
@@ -77,22 +72,24 @@ class _SignupPagesState extends State<SignupPages> {
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 50),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _registerText(),
-            const SizedBox(height: 50),
-            _fullNameField(context),
-            const SizedBox(height: 20),
-            _emailField(context),
-            const SizedBox(height: 20),
-            _passwordField(context),
-            const SizedBox(height: 20),
-            BasicAppButton(
-              onPressed: loading ? null : register,
-              title: loading ? "Loading..." : "Create Account",
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _registerText(),
+              const SizedBox(height: 50),
+              _fullNameField(context),
+              const SizedBox(height: 20),
+              _emailField(context),
+              const SizedBox(height: 20),
+              _passwordField(context),
+              const SizedBox(height: 20),
+              BasicAppButton(
+                onPressed: loading ? null : register,
+                title: loading ? "Creating Account..." : "Create Account",
+              ),
+            ],
+          ),
         ),
       ),
     );

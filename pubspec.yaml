@@ -40,7 +40,7 @@ dependencies:
   hydrated_bloc: ^10.1.1
   path_provider: ^2.1.5
   firebase_core: ^4.2.0
-  firebase_auth: ^6.1.1
+  firebase_auth: ^6.1.2
   cloud_firestore: ^6.0.3
   get_it: ^8.2.0
   dartz: ^0.10.1

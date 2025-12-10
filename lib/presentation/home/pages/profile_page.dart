@@ -5,8 +5,7 @@ import 'package:project_mobile/presentation/home/pages/music_pages.dart';
 import 'package:project_mobile/presentation/auth/pages/signin.dart';
 import 'package:project_mobile/services/user_service.dart';
 import 'package:project_mobile/services/favorite_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:project_mobile/services/auth_service.dart'; 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -27,6 +26,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadData() async {
     try {
+      // Ambil Profil & Favorit secara bersamaan
       final results = await Future.wait([
         UserService.getUserProfile(),
         FavoriteService.getFavorites(),
@@ -35,27 +35,57 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) {
         setState(() {
           _userData = results[0] as Map<String, dynamic>?;
-          _favoriteSongs = results[1] as List<Song>;
+          // Pastikan hasil favorites di-cast dengan aman
+          _favoriteSongs = (results[1] as List).cast<Song>(); 
           _isLoading = false;
         });
       }
     } catch (e) {
+      print("Error loading profile: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // --- LOGIC LOGOUT TERBARU (FIREBASE) ---
   Future<void> _logout() async {
+    try {
+      print("🚀 1. Mulai ambil Data Profil...");
+      
+      // Kita pecah biar ketahuan macet dimana
+      var userProfile = await UserService.getUserProfile();
+      print("✅ 2. Profil didapat: $userProfile");
+
+      print("🚀 3. Mulai ambil Favorites...");
+      var favorites = await FavoriteService.getFavorites();
+      print("✅ 4. Favorites didapat: ${favorites.length} lagu");
+
+      if (mounted) {
+        setState(() {
+          _userData = userProfile;
+          _favoriteSongs = favorites;
+          _isLoading = false;
+        });
+        print("🎉 5. UI Diupdate!");
+      }
+    } catch (e) {
+      print("❌ ERROR DI PROFILE: $e");
+      // Kalau error, matikan loading biar gak muter selamanya
+      if (mounted) setState(() => _isLoading = false);
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const Center(child: CircularProgressIndicator()),
     );
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); 
+    // 1. Panggil Logout dari AuthService Firebase
+    await AuthService().signOut();
 
     if (mounted) {
-      Navigator.pop(context);
+      Navigator.pop(context); // Tutup loading dialog
+      
+      // 2. Pindah ke Halaman Login & Hapus semua history halaman sebelumnya
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const SigninPages()),
@@ -71,9 +101,14 @@ class _ProfilePageState extends State<ProfilePage> {
     final textColor = isDark ? Colors.white : Colors.black;
     final subTextColor = isDark ? Colors.white70 : Colors.black54;
 
-    String initialName = _userData != null && _userData!['username'] != null
-        ? _userData!['username'][0].toUpperCase()
-        : "?";
+    // Ambil inisial nama (Misal "Naufal" -> "N")
+    String initialName = "?";
+    if (_userData != null && _userData!['username'] != null) {
+       String name = _userData!['username'];
+       if (name.isNotEmpty) {
+         initialName = name[0].toUpperCase();
+       }
+    }
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -89,10 +124,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: Column(
                       children: [
+                        // --- HEADER ---
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-    
                             Navigator.canPop(context)
                                 ? IconButton(
                                     onPressed: () => Navigator.pop(context),
@@ -102,10 +137,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       size: 20,
                                     ),
                                   )
-                                : const SizedBox(
-                                    width: 40,
-                                    height: 40,
-                                  ),
+                                : const SizedBox(width: 40, height: 40),
 
                             Text(
                               'Profile',
@@ -116,11 +148,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
 
+                            // --- MENU LOGOUT ---
                             PopupMenuButton<String>(
                               icon: Icon(Icons.more_vert, color: subTextColor),
-                              color: isDark
-                                  ? const Color(0xFF333333)
-                                  : Colors.white,
+                              color: isDark ? const Color(0xFF333333) : Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -134,11 +165,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   value: 'logout',
                                   child: Row(
                                     children: [
-                                      Icon(
-                                        Icons.logout,
-                                        color: Colors.red,
-                                        size: 20,
-                                      ),
+                                      Icon(Icons.logout, color: Colors.red, size: 20),
                                       SizedBox(width: 10),
                                       Text(
                                         'Log Out',
@@ -156,6 +183,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 20),
 
+                        // --- AVATAR ---
                         CircleAvatar(
                           radius: 50,
                           backgroundColor: Colors.grey[800],
@@ -170,12 +198,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 15),
 
+                        // --- EMAIL ---
                         Text(
                           _userData?['email'] ?? 'No Email',
                           style: TextStyle(color: subTextColor, fontSize: 14),
                         ),
                         const SizedBox(height: 6),
 
+                        // --- USERNAME ---
                         Text(
                           _userData?['username'] ?? 'Guest',
                           style: TextStyle(
@@ -186,6 +216,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 20),
 
+                        // --- STATISTIK ---
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -198,7 +229,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             const SizedBox(width: 40),
                             _buildStat(
                               "Following",
-                              "0",
+                              "0", // Fitur following belum kita buat, jadi 0 dulu
                               textColor,
                               subTextColor,
                             ),
@@ -209,6 +240,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 10),
 
+                  // --- LIST FAVORITE HEADER ---
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Align(
@@ -226,6 +258,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 10),
 
+                  // --- LIST FAVORITE ITEMS ---
                   Expanded(
                     child: _favoriteSongs.isEmpty
                         ? Center(
@@ -276,14 +309,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                           fit: BoxFit.cover,
                                           errorBuilder: (ctx, err, stack) =>
                                               Container(
-                                                width: 55,
-                                                height: 55,
-                                                color: Colors.grey[800],
-                                                child: const Icon(
-                                                  Icons.music_note,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
+                                            width: 55,
+                                            height: 55,
+                                            color: Colors.grey[800],
+                                            child: const Icon(
+                                              Icons.music_note,
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -314,10 +347,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      Text(
-                                        _formatDuration(song.duration),
-                                        style: TextStyle(color: subTextColor),
                                       ),
                                       const SizedBox(width: 10),
                                       const Icon(
@@ -356,11 +385,5 @@ class _ProfilePageState extends State<ProfilePage> {
         Text(label, style: TextStyle(color: subTextColor, fontSize: 14)),
       ],
     );
-  }
-
-  String _formatDuration(int totalSeconds) {
-    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
-    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 }

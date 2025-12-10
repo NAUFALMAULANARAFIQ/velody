@@ -1,13 +1,11 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:project_mobile/common/widgets/appbar/app_bar.dart';
 import 'package:project_mobile/common/widgets/button/basic_app_button.dart';
 import 'package:project_mobile/core/configs/assets/app_vector.dart';
 import 'package:project_mobile/presentation/auth/pages/signup.dart';
 import 'package:project_mobile/presentation/home/pages/home.dart';
+import 'package:project_mobile/services/auth_service.dart'; // Import AuthService
 
 class SigninPages extends StatefulWidget {
   const SigninPages({super.key});
@@ -21,59 +19,37 @@ class _SigninPagesState extends State<SigninPages> {
   final TextEditingController passwordController = TextEditingController();
   bool loading = false;
 
-  final String baseUrl = "http://10.0.2.2:8000/api/auth/login";
-
   Future<void> login() async {
+    // Validasi
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Email dan Password harus diisi")),
+      );
+      return;
+    }
+
     setState(() => loading = true);
 
-    try {
-      String input = emailController.text.trim();
-      String password = passwordController.text.trim();
+    // Panggil AuthService Firebase
+    String? error = await AuthService().signIn(
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
+    );
 
-      Map<String, String> requestBody = {
-        "password": password,
-      };
+    if (!mounted) return;
 
-      if (input.contains('@')) {
-        requestBody['email'] = input;
-      } else {
-        requestBody['username'] = input; 
-      }
-
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {
-          "Accept": "application/json",
-        },
-        body: requestBody,
+    if (error == null) {
+      // Sukses Login -> Pindah ke Home
+      // (main.dart akan otomatis mendeteksi login, tapi kita push manual biar UX enak)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
       );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data["token"] != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", data["token"]);
-        
-        if (!mounted) return;
-        
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(data["message"] ?? "Login gagal"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
+    } else {
+      // Gagal
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Gagal terhubung ke server: $e"),
+          content: Text("Login gagal: $error"),
           backgroundColor: Colors.red,
         ),
       );
@@ -91,7 +67,7 @@ class _SigninPagesState extends State<SigninPages> {
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 50),
-        child: SingleChildScrollView( 
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -102,8 +78,8 @@ class _SigninPagesState extends State<SigninPages> {
               _passwordField(context),
               const SizedBox(height: 20),
               BasicAppButton(
-                onPressed: loading ? null : () => login(),
-                title: loading ? "Loading..." : 'Sign In',
+                onPressed: loading ? null : login,
+                title: loading ? "Signing In..." : 'Sign In',
               ),
             ],
           ),
@@ -123,7 +99,8 @@ class _SigninPagesState extends State<SigninPages> {
     return TextField(
       controller: emailController,
       decoration: const InputDecoration(
-        hintText: 'Enter Username Or Email',
+        // Firebase Login WAJIB pakai Email, bukan Username
+        hintText: 'Enter Email', 
       ).applyDefaults(Theme.of(context).inputDecorationTheme),
     );
   }

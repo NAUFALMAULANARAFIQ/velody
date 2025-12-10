@@ -1,73 +1,68 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:project_mobile/data/models/songs.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HistoryService {
-  static const String baseUrl = "http://10.0.2.2:8000/api/history";
-  
-  static Future<List<Song>> getHistory() async {
+  // Ambil ID User yang sedang login
+  static String get _userId {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception("User belum login");
+    }
+    return user.uid;
+  }
+
+  // 1. Tambah ke History (Dipanggil saat klik lagu)
+  static Future<void> addHistory(String songId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) {
-        print("GET HISTORY: Token tidak ditemukan!");
-        return [];
-      }
-
-      print("GET HISTORY: Mengambil data dari $baseUrl...");
-      final response = await http.get(
-        Uri.parse(baseUrl),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
-
-      print("GET HISTORY Status: ${response.statusCode}");
-      print("GET HISTORY Body: ${response.body}");
-
-      if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        if (body.isEmpty) {
-          print("GET HISTORY: Data dari server KOSONG []");
-        } else {
-          print("GET HISTORY: Berhasil dapat ${body.length} lagu");
-        }
-        return body.map((e) => Song.fromJson(e)).toList();
-      } else {
-        print("GET HISTORY Gagal: ${response.statusCode}");
-        return [];
-      }
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('history')
+          .doc(songId) // Pakai ID lagu sebagai ID dokumen biar gak duplikat
+          .set({
+        'songId': songId,
+        'played_at': FieldValue.serverTimestamp(), // Simpan waktu sekarang
+      });
     } catch (e) {
-      print("Error Koneksi GET History: $e");
-      return [];
+      print("Gagal nambah history: $e");
     }
   }
 
-  static Future<void> addHistory(int songId) async {
+  // 2. Ambil Daftar History
+  static Future<List<Song>> getHistory() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      if (token == null) return;
+      // Ambil list history, urutkan dari yang paling baru diputar
+      QuerySnapshot historySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userId)
+          .collection('history')
+          .orderBy('played_at', descending: true)
+          .get();
 
-      print("Menyimpan Song ID $songId...");
+      if (historySnapshot.docs.isEmpty) return [];
 
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode({"id_songs": songId}),
-      );
+      List<Song> historySongs = [];
 
-      print("ADD HISTORY Status: ${response.statusCode}");
-      print("ADD HISTORY Body: ${response.body}");
+      // Loop setiap history, ambil detail lagunya dari collection 'songs'
+      for (var doc in historySnapshot.docs) {
+        String songId = doc.id;
+
+        DocumentSnapshot songDoc = await FirebaseFirestore.instance
+            .collection('songs')
+            .doc(songId)
+            .get();
+
+        // Cek kalau lagunya masih ada di database (belum dihapus admin)
+        if (songDoc.exists) {
+          historySongs.add(Song.fromFirestore(songDoc));
+        }
+      }
+
+      return historySongs;
     } catch (e) {
-      print("Error Koneksi ADD History: $e");
+      print("Gagal ambil history: $e");
+      return [];
     }
   }
 }

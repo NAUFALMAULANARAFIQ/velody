@@ -3,7 +3,7 @@ import 'package:project_mobile/core/configs/themes/app_colors.dart';
 import 'package:project_mobile/data/models/songs.dart';
 import 'package:project_mobile/presentation/home/pages/music_pages.dart';
 import 'package:project_mobile/services/song_service.dart';
-import 'package:project_mobile/services/history_service.dart';
+import 'package:project_mobile/services/history_service.dart'; // Pastikan import ini ada
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -27,11 +27,12 @@ class _SearchPageState extends State<SearchPage> {
     _fetchData();
   }
 
+  // Ambil Data Lagu & History Sekaligus
   Future<void> _fetchData() async {
     try {
       final results = await Future.wait([
-        SongService.getSongs(),
-        HistoryService.getHistory(),
+        SongService.getSongs(),       // Index 0
+        HistoryService.getHistory(),  // Index 1
       ]);
 
       if (mounted) {
@@ -42,10 +43,12 @@ class _SearchPageState extends State<SearchPage> {
         });
       }
     } catch (e) {
+      print("Error fetching search data: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // Refresh History setelah nge-klik lagu
   Future<void> _refreshHistory() async {
     final history = await HistoryService.getHistory();
     if (mounted) {
@@ -55,6 +58,7 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  // Logic Filter Pencarian (Client Side)
   void _runFilter(String enteredKeyword) {
     List<Song> results = [];
     if (enteredKeyword.isEmpty) {
@@ -84,6 +88,7 @@ class _SearchPageState extends State<SearchPage> {
     if (_isLoading) {
       bodyContent = const Center(child: CircularProgressIndicator());
     } else if (_searchController.text.isEmpty) {
+      // KONDISI 1: Belum ngetik apa-apa (Tampilkan History)
       if (_historySongs.isEmpty) {
         bodyContent = _emptyState(textColor);
       } else {
@@ -114,6 +119,7 @@ class _SearchPageState extends State<SearchPage> {
         );
       }
     } else {
+      // KONDISI 2: Sedang mencari (Tampilkan Hasil Filter)
       if (_filteredSongs.isEmpty) {
         bodyContent = _notFound(textColor);
       } else {
@@ -142,6 +148,7 @@ class _SearchPageState extends State<SearchPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Search Bar
             Container(
               decoration: BoxDecoration(
                 color: cardColor,
@@ -170,6 +177,7 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
             const SizedBox(height: 20),
+            // Content (History / Result / Empty)
             Expanded(child: bodyContent),
           ],
         ),
@@ -179,20 +187,25 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _musicCard(Song song, Color textColor, Color? cardColor, bool isDark, {bool isHistory = false}) {
     return GestureDetector(
-      onTap: () {
-        HistoryService.addHistory(song.id).then((_) {
-          _refreshHistory(); 
-        });
+      onTap: () async {
+        // 1. Simpan ke History Firebase
+        await HistoryService.addHistory(song.id);
+        
+        // 2. Refresh tampilan history di background
+        _refreshHistory(); 
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MusicPage(
-              playlist: [song],
-              initialIndex: 0,
+        // 3. Pindah ke Halaman Putar Musik
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MusicPage(
+                playlist: [song], // Putar lagu ini saja
+                initialIndex: 0,
+              ),
             ),
-          ),
-        );
+          );
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -224,6 +237,7 @@ class _SearchPageState extends State<SearchPage> {
             maxLines: 1, overflow: TextOverflow.ellipsis,
             style: TextStyle(color: textColor.withOpacity(0.7)),
           ),
+          // Icon beda kalau history (Jam) vs hasil search (Play)
           trailing: isHistory 
             ? Icon(Icons.history, color: AppColors.primary) 
             : Icon(Icons.play_circle_fill, color: AppColors.primary, size: 32),

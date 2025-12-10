@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:audioplayers/audioplayers.dart'; // <-- Pakai ini
 import 'package:project_mobile/data/models/songs.dart';
 import 'package:project_mobile/core/configs/themes/app_colors.dart';
 import 'package:project_mobile/presentation/home/pages/lyrics_page.dart';
@@ -17,13 +17,14 @@ class MusicPage extends StatefulWidget {
 }
 
 class _MusicPageState extends State<MusicPage> {
-  late AudioPlayer _audioPlayer;
+  late AudioPlayer _audioPlayer; // Pakai Audioplayers
   late int currentIndex;
+  
   bool isPlaying = false;
   Duration currentPosition = Duration.zero;
   Duration totalDuration = Duration.zero;
 
-  // Getter untuk mengambil lagu yang sedang aktif
+  // Getter lagu aktif
   Song get currentSong => widget.playlist[currentIndex];
 
   @override
@@ -35,66 +36,70 @@ class _MusicPageState extends State<MusicPage> {
   }
 
   Future<void> _initAudio() async {
-    // Mulai putar lagu saat halaman dibuka
-    await _playSong(currentSong);
-
-    // Listen posisi durasi lagu (untuk slider)
-    _audioPlayer.positionStream.listen((pos) {
+    // 1. Listen Durasi Lagu (Total Waktu)
+    _audioPlayer.onDurationChanged.listen((newDuration) {
       if (mounted) {
-        setState(() => currentPosition = pos);
+        setState(() => totalDuration = newDuration);
       }
     });
 
-    // Listen status play/pause (untuk ikon tombol)
-    _audioPlayer.playerStateStream.listen((state) {
+    // 2. Listen Posisi Lagu (Jalannya Slider)
+    _audioPlayer.onPositionChanged.listen((newPosition) {
       if (mounted) {
-        setState(() => isPlaying = state.playing);
+        setState(() => currentPosition = newPosition);
       }
     });
 
-    // Auto next saat lagu selesai
-    _audioPlayer.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
-        _nextSong();
+    // 3. Listen Status (Play/Pause/Stop)
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          isPlaying = state == PlayerState.playing;
+        });
       }
     });
+
+    // 4. Listen Kalau Lagu Selesai (Auto Next)
+    _audioPlayer.onPlayerComplete.listen((event) {
+      _nextSong();
+    });
+
+    // Mulai putar lagu pertama
+    _playSong(currentSong);
   }
 
   Future<void> _playSong(Song song) async {
     try {
-      // Mengambil URL lagu dari Model (fileUrl sudah di-fix localhost->10.0.2.2 di Model)
-      await _audioPlayer.setUrl(song.fileUrl);
-      _audioPlayer.play();
-
-      // Tunggu sebentar agar durasi terload
-      await Future.delayed(const Duration(milliseconds: 500));
-
+      // Stop dulu biar aman
+      await _audioPlayer.stop();
+      
+      // Play dari URL (UrlSource khusus Audioplayers)
+      // song.fileUrl berasal dari Model yang sudah kita fix tadi
+      await _audioPlayer.play(UrlSource(song.fileUrl)); 
+      
       if (mounted) {
         setState(() {
-          totalDuration = _audioPlayer.duration ?? Duration.zero;
-          currentPosition = Duration.zero;
+          isPlaying = true;
         });
       }
     } catch (e) {
-      print("Error playing song: $e");
-      // Opsional: Tampilkan snackbar error
+      print("Error playing song beb: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memutar lagu: ${e.toString()}")),
+      );
     }
   }
 
   void _nextSong() {
     if (currentIndex < widget.playlist.length - 1) {
-      setState(() {
-        currentIndex++;
-      });
+      setState(() => currentIndex++);
       _playSong(currentSong);
     }
   }
 
   void _previousSong() {
     if (currentIndex > 0) {
-      setState(() {
-        currentIndex--;
-      });
+      setState(() => currentIndex--);
       _playSong(currentSong);
     }
   }
@@ -132,39 +137,32 @@ class _MusicPageState extends State<MusicPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 20,
-                      color: textColor,
-                    ),
+                    icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: textColor),
                     onPressed: () => Navigator.pop(context),
                   ),
                   Text(
                     'Now playing',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: textColor),
                   ),
                   IconButton(
-                    icon: Icon(Icons.playlist_add, color: textColor), // Ganti icon biar jelas
-                        onPressed: () {
-                          // Tampilkan Bottom Sheet
-                          showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) => AddToPlaylistSheet(
-                              songId: currentSong.id,
-                            )
-                          );
-                        }
+                    icon: Icon(Icons.playlist_add, color: textColor),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => AddToPlaylistSheet(
+                          // WARNING: Pastikan AddToPlaylistSheet kamu menerima String ya, 
+                          // karena song.id sekarang tipenya String (dari Firebase).
+                          songId: currentSong.id, 
+                        )
+                      );
+                    },
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              // --- ALBUM ART (Fixed with customCoverUrl) ---
+              // --- ALBUM ART ---
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: SizedBox(
@@ -172,10 +170,7 @@ class _MusicPageState extends State<MusicPage> {
                   width: double.infinity,
                   child: Image.network(
                     currentSong.customCoverUrl,
-
                     fit: BoxFit.cover,
-
-                    // Loading Indicator
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
                       return Container(
@@ -184,73 +179,42 @@ class _MusicPageState extends State<MusicPage> {
                         child: const Center(child: CircularProgressIndicator()),
                       );
                     },
-
-                    // Error Builder (Kalau file backend gak ketemu)
                     errorBuilder: (context, error, stackTrace) {
-                      print("Gagal load Cover: ${currentSong.customCoverUrl}");
                       return Container(
-                        height: 360,
-                        color: Colors.grey[800],
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.broken_image,
-                              size: 80,
-                              color: Colors.white24,
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              "Cover not found\n${currentSong.title}",
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white54),
-                            ),
-                          ],
-                        ),
+                        height: 360, color: Colors.grey[800],
+                        child: const Icon(Icons.broken_image, size: 80, color: Colors.white24),
                       );
                     },
                   ),
                 ),
               ),
 
-              // --- TITLE & ARTIST ---
               const SizedBox(height: 20),
+              
+              // --- TITLE & ARTIST ---
               Text(
                 currentSong.title,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
                 textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
               Text(
                 currentSong.artist,
                 style: TextStyle(fontSize: 16, color: subTextColor),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
 
               // --- LIKE BUTTON ---
-              FavoriteButton(
-                song: currentSong,
-                size: 30, 
-              ),
+              FavoriteButton(song: currentSong, size: 30),
+
               // --- SLIDER ---
               Column(
                 children: [
                   Slider(
-                    value: currentPosition.inSeconds.toDouble().clamp(
-                      0.0,
-                      totalDuration.inSeconds.toDouble(),
-                    ),
-                    max: totalDuration.inSeconds.toDouble() > 0
-                        ? totalDuration.inSeconds.toDouble()
-                        : 1,
+                    value: currentPosition.inSeconds.toDouble().clamp(0.0, totalDuration.inSeconds.toDouble()),
+                    max: totalDuration.inSeconds.toDouble() > 0 ? totalDuration.inSeconds.toDouble() : 1,
                     onChanged: (value) {
                       _audioPlayer.seek(Duration(seconds: value.toInt()));
                     },
@@ -260,14 +224,8 @@ class _MusicPageState extends State<MusicPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        formatDuration(currentPosition),
-                        style: TextStyle(color: subTextColor),
-                      ),
-                      Text(
-                        formatDuration(totalDuration),
-                        style: TextStyle(color: subTextColor),
-                      ),
+                      Text(formatDuration(currentPosition), style: TextStyle(color: subTextColor)),
+                      Text(formatDuration(totalDuration), style: TextStyle(color: subTextColor)),
                     ],
                   ),
                 ],
@@ -278,36 +236,23 @@ class _MusicPageState extends State<MusicPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.repeat, color: subTextColor),
-                  ),
+                  IconButton(onPressed: () {}, icon: Icon(Icons.repeat, color: subTextColor)),
                   const SizedBox(width: 10),
                   IconButton(
                     onPressed: _previousSong,
-                    icon: Icon(
-                      Icons.skip_previous_rounded,
-                      size: 36,
-                      color: textColor,
-                    ),
+                    icon: Icon(Icons.skip_previous_rounded, size: 36, color: textColor),
                   ),
                   const SizedBox(width: 10),
                   Container(
-                    decoration: BoxDecoration(
-                      color: accentColor,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
                     child: IconButton(
-                      icon: Icon(
-                        isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white,
-                      ),
+                      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white),
                       iconSize: 36,
                       onPressed: () {
                         if (isPlaying) {
                           _audioPlayer.pause();
                         } else {
-                          _audioPlayer.play();
+                          _audioPlayer.resume(); // Di audioplayers pakai resume() kalau sudah di-load
                         }
                       },
                     ),
@@ -315,17 +260,10 @@ class _MusicPageState extends State<MusicPage> {
                   const SizedBox(width: 10),
                   IconButton(
                     onPressed: _nextSong,
-                    icon: Icon(
-                      Icons.skip_next_rounded,
-                      size: 36,
-                      color: textColor,
-                    ),
+                    icon: Icon(Icons.skip_next_rounded, size: 36, color: textColor),
                   ),
                   const SizedBox(width: 10),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.shuffle, color: subTextColor),
-                  ),
+                  IconButton(onPressed: () {}, icon: Icon(Icons.shuffle, color: subTextColor)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -338,16 +276,16 @@ class _MusicPageState extends State<MusicPage> {
                     MaterialPageRoute(
                       builder: (context) => LyricsPage(
                         song: currentSong,
+                        // Kalau LyricsPage kamu minta 'just_audio.AudioPlayer', 
+                        // kamu mungkin perlu edit LyricsPage juga.
+                        // Tapi kalau cuma kirim data lagu, ini aman.
                         audioPlayer: _audioPlayer,
                       ),
                     ),
                   );
                 },
                 icon: Icon(Icons.keyboard_arrow_up_rounded, color: textColor),
-                label: Text(
-                  'Lyrics',
-                  style: TextStyle(fontSize: 16, color: textColor),
-                ),
+                label: Text('Lyrics', style: TextStyle(fontSize: 16, color: textColor)),
               ),
             ],
           ),

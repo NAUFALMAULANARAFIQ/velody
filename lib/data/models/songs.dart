@@ -1,10 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Song {
-  final int id;
+  final String id; // Ubah dari int ke String (ID Firebase itu huruf & angka)
   final String title;
   final String artist;
-  final String thumbnail;
-  final String fileUrl;
-  final String albumImage;
+  final String thumbnail; // Ini untuk cover_url dari Firebase
+  final String fileUrl;   // Ini untuk audio_url dari Firebase
   final int duration;
 
   Song({
@@ -13,68 +14,57 @@ class Song {
     required this.artist,
     required this.thumbnail,
     required this.fileUrl,
-    required this.albumImage,
     required this.duration,
   });
 
-  String get customCoverUrl {
-    String cleanTitle = title
-        .toLowerCase()
-        .trim()
-        .replaceAll(' ', '_')
-        .replaceAll(RegExp(r"[^\w\-]"), '');
-    return "http://10.0.2.2:8000/cover/$cleanTitle.webp";
-  }
+  // 1. Getter untuk UI kamu
+  // Karena UI kamu memanggil 'song.customCoverUrl', kita arahkan langsung ke thumbnail.
+  // Jadi kamu TIDAK PERLU ubah codingan di UI.
+  String get customCoverUrl => thumbnail;
 
-  factory Song.fromJson(Map<String, dynamic> json) {
-    String fixUrl(dynamic url) {
-      if (url == null) return 'https://via.placeholder.com/150';
-      if (url is! String) return 'https://via.placeholder.com/150';
-      if (url.contains('127.0.0.1') || url.contains('localhost')) {
-        return url.replaceAll(RegExp(r'127\.0\.0\.1|localhost'), '10.0.2.2');
-      }
-      return url;
-    }
-
-    String parseArtist(dynamic artistField) {
-      if (artistField == null) return 'Unknown Artist';
-      if (artistField is String) return artistField;
-      if (artistField is Map<String, dynamic>) {
-        return artistField['name'] ?? 'Unknown Artist';
-      }
-      return 'Unknown Artist';
-    }
-
-    int parseDuration(dynamic value) {
-      if (value == null) return 0; 
-      if (value is int) return value;
-      if (value is String) {
-        return int.tryParse(value) ?? 0; 
-      }
-      if (value is double) return value.toInt(); 
-      return 0;
-    }
-
-    String rawTitle = json['title'] ?? 'Unknown Title';
+  // 2. Factory Utama: Mengubah Data Firebase jadi Object Song
+  factory Song.fromFirestore(DocumentSnapshot doc) {
+    // Ambil data di dalam dokumen
+    Map data = doc.data() as Map<String, dynamic>;
 
     return Song(
-      id: json['id_songs'] ?? 0,
-      title: rawTitle,
-      artist: parseArtist(json['artist']),
-      thumbnail: fixUrl(json['cover_image'] ?? json['thumbnail']),
-      fileUrl: fixUrl(json['file_url'] ?? json['audio_url']),
-      albumImage: "", 
-      duration: parseDuration(json['duration']), 
+      // doc.id adalah ID unik dari dokumen Firebase
+      id: doc.id, 
+      
+      title: data['title'] ?? 'Tanpa Judul',
+      
+      // Pastikan key-nya 'artist_name' sesuai input manual kita tadi
+      artist: data['artist_name'] ?? 'Unknown Artist', 
+      
+      // Ambil link gambar, kalau null kasih placeholder
+      thumbnail: data['cover_url'] ?? 'https://placehold.co/100', 
+      
+      // Ambil link lagu
+      fileUrl: data['audio_url'] ?? '',
+      
+      // Ambil durasi, pastikan jadi integer
+      duration: _parseDuration(data['duration']), 
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'artist': artist,
-      'cover_image': thumbnail,
-      'file_url': fileUrl,
-      'duration': duration,
-    };
+  // Helper kecil buat jaga-jaga kalau durasi tersimpan sebagai String
+  static int _parseDuration(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  // 3. Factory JSON (Opsional/Legacy)
+  // Disimpan jaga-jaga kalau ada bagian app yang pakai format JSON lama
+  factory Song.fromJson(Map<String, dynamic> json) {
+    return Song(
+      id: json['id_songs']?.toString() ?? '0', // Konversi ke string
+      title: json['title'] ?? '',
+      artist: json['artist'] is Map ? json['artist']['name'] : json['artist'] ?? '',
+      thumbnail: json['cover_image'] ?? '',
+      fileUrl: json['file_url'] ?? '',
+      duration: _parseDuration(json['duration']),
+    );
   }
 }

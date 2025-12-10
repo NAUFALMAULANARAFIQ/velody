@@ -1,30 +1,27 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserService {
-  static const String baseUrl = "http://10.0.2.2:8000/api/auth";
-  
+  // Ambil Data Profil User yang Sedang Login
   static Future<Map<String, dynamic>?> getUserProfile() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      if (token == null) return null;
+      // 1. Cek siapa yang login (ambil UID-nya)
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser == null) return null; // Kalau gak ada yang login
 
-      final response = await http.get(
-        Uri.parse("$baseUrl/profile"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
+      // 2. Ambil dokumen user dari Firestore berdasarkan UID
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['user']; 
+      if (userDoc.exists) {
+        return userDoc.data() as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
+      print("Gagal ambil profil: $e");
       return null;
     }
   }

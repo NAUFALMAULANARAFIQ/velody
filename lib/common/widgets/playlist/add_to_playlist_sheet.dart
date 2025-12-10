@@ -4,7 +4,7 @@ import 'package:project_mobile/data/models/playlist.dart';
 import 'package:project_mobile/services/playlist_service.dart';
 
 class AddToPlaylistSheet extends StatefulWidget {
-  final int songId;
+  final String songId;
 
   const AddToPlaylistSheet({super.key, required this.songId});
 

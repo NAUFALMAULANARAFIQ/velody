@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Ini "Lem" utamanya biar Android kenal sama Google Services
+        classpath("com.android.tools.build:gradle:8.2.1") // Sesuaikan versi kalau error, tapi biasanya ini aman
+        classpath("com.google.gms:google-services:4.4.2")
+    }
+}
 allprojects {
     repositories {
         google()
