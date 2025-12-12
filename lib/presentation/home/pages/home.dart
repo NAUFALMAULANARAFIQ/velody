@@ -70,8 +70,6 @@ class _HomePageState extends State<HomePage>
       //     );
           
       //     await SeederService.uploadSongs();
-          
-      //     // Refresh halaman (trick simpel: setState kosong)
       //     setState(() {
       //        songFuture = SongService.getSongs();
       //     });
