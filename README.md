@@ -2,114 +2,109 @@
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 ![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-brightgreen?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Stable-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-UAS%20Final%20Project-blue?style=for-the-badge)
 
 ---
 
-📌 **Deskripsi Singkat**  
-Velody adalah aplikasi pemutar musik berbasis **Flutter** yang dirancang untuk menghadirkan pengalaman mendengarkan musik yang lembut, tenang, dan elegan.  
-Aplikasi ini mengusung konsep **musik mellow** dengan tampilan **minimalis modern**, serta mendukung mode **Light** dan **Dark** untuk menyesuaikan preferensi pengguna.  
+📌 **Deskripsi Aplikasi** **Velody** adalah aplikasi pemutar musik berbasis **Flutter** yang dirancang untuk menghadirkan pengalaman streaming musik yang *seamless* dan elegan. Aplikasi ini kini telah terintegrasi penuh dengan **Cloud Backend** untuk manajemen pengguna dan konten secara *real-time*.
 
-Velody dibuat sebagai proyek **UTS Pemrograman Mobile** dengan tujuan untuk melatih pengembangan aplikasi mobile yang fokus pada kenyamanan pengguna dan estetika antarmuka.
+Aplikasi ini dikembangkan sebagai **Proyek Akhir (UAS) Pemrograman Mobile**, berevolusi dari versi sebelumnya (UTS) dengan penambahan fitur autentikasi, database online, dan manajemen state yang lebih kompleks.
 
 ---
 
-🎯 **Tujuan Aplikasi**  
-- Memberikan pengalaman mendengarkan musik dengan nuansa mellow yang menenangkan.  
-- Menyediakan fitur dasar pemutar musik seperti *play, pause, next, previous,* dan *lyrics view*.  
-- Menghadirkan antarmuka yang minimalis, elegan, dan mudah digunakan.  
-- Mendukung mode **Light** dan **Dark** agar nyaman di berbagai kondisi pencahayaan.  
-- Menjadi dasar pengembangan aplikasi musik yang lebih kompleks di masa depan.
+🎯 **Fitur Utama** - **User Authentication:** Login dan Register aman menggunakan Firebase Auth.
+- **Cloud Streaming:** Memutar lagu secara online tanpa perlu menyimpan file di perangkat.
+- **Playlist Management:** Membuat playlist pribadi dan menambahkan lagu favorit.
+- **Theme System:** Dukungan **Dark Mode** dan **Light Mode** yang persisten (tersimpan).
+- **Responsive Player:** Kontrol musik lengkap (Play, Pause, Shuffle, Loop) dengan tampilan cover album estetik.
 
 ---
 
-🧩 **Daftar Halaman dan Fungsinya**
+🛠 **Arsitektur & Teknologi**
 
-| Halaman | Nama File | Fungsi Utama |
+Aplikasi ini dibangun menggunakan prinsip **Clean Architecture** dengan pemisahan *Presentation Layer*, *Business Logic*, dan *Data Layer*.
+
+| Kategori | Teknologi | Keterangan |
 |----------|------------|---------------|
-| Get Started | `get_started.dart` | Halaman pembuka aplikasi yang memperkenalkan konsep dan tombol mulai. |
-| Choose Mode | `choose_mode.dart` | Menyediakan pilihan tampilan Light/Dark sebelum masuk ke menu utama. |
-| Login Page | `login_page.dart` | Form login bagi pengguna yang sudah memiliki akun. |
-| Register Page | `register_page.dart` | Form registrasi pengguna baru untuk membuat akun. |
-| Home Page | `home_page.dart` | Menampilkan daftar lagu, rekomendasi playlist, dan musik favorit. |
-| Player Page | `player_page.dart` | Memutar lagu, menampilkan cover, kontrol musik, serta lirik. |
-| Search Page | `search_page.dart` | Pencarian lagu, artis, atau playlist berdasarkan kata kunci. |
-| Profile Page | `profile_page.dart` | Menampilkan informasi pengguna dan opsi pengaturan akun. |
+| **Framework** | Flutter SDK | UI & Logic utama. |
+| **Language** | Dart | Bahasa pemrograman. |
+| **State Management** | BLoC & Hydrated BLoC | Mengatur state aplikasi dan tema persisten. |
+| **Backend** | Firebase Auth | Manajemen sesi pengguna (Login/Register). |
+| **Database** | Cloud Firestore | Database NoSQL untuk metadata lagu & playlist. |
+| **Storage/CDN** | GitHub Repository | Hosting aset audio (.mp3) untuk streaming cepat. |
 
 ---
 
-💾 **Pengolahan Data Dummy**  
-Pada versi ini, semua data yang ditampilkan dalam aplikasi masih bersifat **dummy** dan disimpan secara lokal.  
-Data mencakup daftar lagu, informasi pengguna, serta playlist sederhana untuk keperluan demonstrasi.
+🔌 **Penjelasan API & Data (Backend)**
 
-**Contoh struktur data dummy (dalam bentuk JSON):**
+Aplikasi ini tidak menggunakan REST API konvensional, melainkan menggunakan **Firebase SDK** yang berinteraksi langsung dengan database Cloud Firestore. Berikut adalah skema data (Collection) yang digunakan sebagai *endpoint* data:
 
-```json
-{
-  "user": {
-    "name": "Naufal",
-    "avatar": ""
-  },
-  "songs": [
+### 1. Collection: `songs`
+Berisi seluruh katalog lagu yang tersedia di aplikasi.
+* **Method:** `SongService.getSongs()`
+* **Struktur Data (JSON Object):**
+    ```json
     {
-      "id": 1,
-      "title": "Faded Memories",
-      "artist": "Velody Sounds",
-      "duration": "03:45"
-    },
-    {
-      "id": 2,
-      "title": "Midnight Rain",
-      "artist": "Mellow Tune",
-      "duration": "04:10"
+      "title": "Hericane",
+      "artist_name": "LANY",
+      "duration": 246,
+      "cover_url": "[https://firebasestorage.googleapis.com/.../image.jpg](https://firebasestorage.googleapis.com/.../image.jpg)",
+      "audio_url": "[https://raw.githubusercontent.com/naufalmaulanarafiq/velody-assets/main/hericane.mp3](https://raw.githubusercontent.com/naufalmaulanarafiq/velody-assets/main/hericane.mp3)"
     }
-  ]
-}
+    ```
 
-```
+### 2. Collection: `users`
+Menyimpan profil pengguna yang terdaftar.
+* **Method:** `AuthService.signUp()`
+* **Data:** `uid`, `email`, `username`, `created_at`.
 
----
-⚙️ Cara Penggunaan Aplikasi
-
-Clone Repository
-
-git clone https://github.com/username/velody.git
-
-
-Masuk ke Folder Project
-
-cd velody
-
-
-Jalankan Perintah Get Packages
-
-flutter pub get
-
-
-Jalankan Aplikasi
-
-flutter run
-
-
-Aplikasi dapat dijalankan di emulator Android/iOS maupun perangkat fisik.
+### 3. Collection: `playlists`
+Menyimpan data playlist yang dibuat oleh user.
+* **Method:** `PlaylistService.createPlaylist()`
+* **Data:** `name`, `description`, `songs` (Array of Song IDs).
 
 ---
-💡 Teknologi yang Digunakan
 
-Flutter (Framework utama)
+🧩 **Daftar Halaman (Sitemap)**
 
-Dart (Bahasa pemrograman)
+| Halaman | Deskripsi |
+|----------|---------------|
+| **Splash Screen** | Halaman loading awal untuk inisialisasi Firebase & Aset. |
+| **Intro / Get Started** | Halaman pengenalan aplikasi untuk pengguna baru. |
+| **Auth (Login/Register)** | Halaman autentikasi untuk akses akun. |
+| **Home Page** | Menampilkan Top Albums, Rekomendasi, dan Tab Kategori. |
+| **Music Player** | Halaman pemutar musik utama dengan kontrol & lirik. |
+| **Playlist / Library** | Menampilkan daftar playlist yang dibuat pengguna. |
+| **Profile** | Informasi akun pengguna dan pengaturan tema. |
 
-Provider / Bloc (State Management)
+---
 
-Shared Preferences (Penyimpanan lokal)
+⚙️ **Cara Instalasi & Menjalankan**
 
-Google Fonts & Lottie (UI Enhancement)
+Ikuti langkah berikut untuk menjalankan project di mesin lokal Anda:
 
-👨‍💻 Dibuat oleh
-Naufal Maulana rafiq 
-📚 UTS Pemrograman Mobile – 2025
+1. **Clone Repository**
+   ```bash
+   git clone [https://github.com/naufalmaulanarafiq/velody.git](https://github.com/naufalmaulanarafiq/velody.git)
+2. **Masuk ke Direktori Project**
+   ```Bash
+   cd velody
+3. **Install Dependencies Pastikan koneksi internet stabil untuk mengunduh package Flutter & Firebase.**
+   ```Bash
+   flutter pub get
+4. **Konfigurasi Firebase (Penting)**
+  Pastikan file google-services.json sudah tersedia di folder android/app/.
+  Jika belum, unduh dari Firebase Console project Anda.
 
-✨ “Listen with calm, live with harmony.” — Velody
+5. **Jalankan Aplikasi Disarankan menggunakan perintah ini untuk melihat log error jika ada:**
+   ```Bash
+   flutter run
+
+
+  👨‍💻 Tim Pengembang Naufal Maulana Rafiq Mahasiswa Teknik Informatika
+
+  Final Project Pemrograman Mobile – 2025
+
+  ✨ “Listen with calm, live with harmony.” — Velody
